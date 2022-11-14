@@ -1,8 +1,8 @@
-openapi: "3.0.2"
+openapi: "3.0.3"
 info:
   description: "YMCA 360 Public API. Find out more about YMCA 360 at [https://ymca360.org/api](https://ymca360.org/api)."
   version: "1.0.0-RC1"
-  title: "YMCA360 API v1.0"
+  title: "YMCA360 Public API v1.0"
   termsOfService: "https://ymca360.org/api/terms/"
   contact:
     email: "info@ymca360.org"
@@ -10,36 +10,102 @@ info:
     name: "Apache 2.0"
     url: "http://www.apache.org/licenses/LICENSE-2.0.html"
 servers:
-  - url: "https://y360cms.docksal/api/1.0"
-    description: "Local Docksal development environment"
   - url: "https://cms.ymca360.org/api/1.0"
-    description: "Production environment"
+    description: "Live"
 tags:
 - name: "Live Streams"
   description: "Operations with live streams"
 security:
 - apikey: []
+paths:
+  /live-streams:
+    get:
+      tags: 
+      - "Live Streams"
+      summary: "Upcoming live streams"
+      description: "Lists upcoming live streams in chronological order"
+      operationId: "upcomingLiveStreams"
+      parameters:
+      - $ref: '#/components/parameters/page'
+      - $ref: '#/components/parameters/limit'
+      - $ref: '#/components/parameters/from'
+      - $ref: '#/components/parameters/to'
+      - $ref: '#/components/parameters/association'
+      responses:
+        "200":
+          description: "Successfully retrieved"
+          content:
+            application/json:
+              schema:
+                description: "Upcoming Live Streams"
+                type: object
+                required:
+                  - items
+                  - summary
+                properties:
+                  items:
+                    type: array
+                    description: "Actual Live Streams"
+                    items:
+                      $ref: "#/components/schemas/livestream"
+                  summary:
+                    $ref: '#/components/schemas/pagesummary'
+        "401":
+          description: "Authentication failed"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: "Error message"
+                    example: "Authentication header is missing"
+        "403":
+          description: "Forbidden"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: "Error message"
+                    example: "Access denied for the API KEY XXX-XXXXX-XXX"
+        "500":
+          description: "Error"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: "Error message"
+                    example: "Query parameter `limit` value can not be less than 1"
 components:
   schemas:
-    pageSummary:
-      description: "Page summary"
-      type: object
-      properties:
-        limit:
-          type: integer
-          description: "Requested size of the page"
-          example: 50
-        page: 
-          type: integer
-          description: "Page number"
-          example: 0
-        total:
-          type: integer
-          description: "Total count of items"
-          example: 1234
-    liveStream:
+    livestream:
       description: "Live Stream object"
       type: object
+      required:
+        - id
+        - name
+        - description
+        - status
+        - url
+        - startTime
+        - endTime
+        - duration
+        - thumbnail
+        - category
+        - association
+        - level
+        - instructors
+        - equipment
+        - language
+        - attachments
+        - restream
       properties:
         id:
           type: integer
@@ -49,22 +115,23 @@ components:
           type: string
           description: "Name of the Live Stream"
           example: "Silver circuit"
+        description:
+          type: string
+          description: "Live Stream description"
+          example: "Improves overall health using low impact techniques that incorporate light cardio, strength, and balance. Designed for all fitness levels."
         status:
           type: string
           enum: 
-            - offline
-            - live
-            - finished
+            - open
             - cancelled
           description: >
-            Sort order:
-             * `offline` - The Live Stream hasn't started yet.
-             * `live` - The Live Stream is live.
-             * `finished` - The Live Stream has finished
+            Status:
+             * `open` - The Live Stream is going to take place.
              * `cancelled` - The Live Stream has been cancelled.
-          example: "offline"
+          example: "open"
         url:
           type: string
+          allowEmptyValue: true
           description: "Live Stream URL (at https://ymca360.org)"
           example: "https://ymca360.org/live/9696"
         startTime:
@@ -97,6 +164,7 @@ components:
           example: "All Levels"
         instructors:
           type: array
+          description: "Live Stream instructors"
           items:
             type: string
             description: "Instructor name"
@@ -134,6 +202,27 @@ components:
           type: boolean
           description: "Indicates if the live stream is a restream"
           example: false
+    pagesummary:
+      description: "Page summary"
+      type: object
+      required:
+        - limit
+        - page
+        - total
+      properties:
+        limit:
+          type: integer
+          description: "Page size"
+          example: 100
+        page: 
+          type: integer
+          description: "Page number"
+          example: 0
+        total:
+          type: integer
+          description: "Total number of items"
+          example: 1234
+
   parameters:
     page:
       in: query
@@ -142,6 +231,7 @@ components:
       required: false
       schema:
         type: integer
+        minumum: 0
     limit:
       in: query
       name: limit
@@ -149,6 +239,7 @@ components:
       required: false
       schema:
         type: integer
+        minumum: 1
     from:
       in: query
       name: from
@@ -156,7 +247,6 @@ components:
       required: false
       schema:
         type: integer
-      example: 1668099600
     to:
       in: query
       name: to
@@ -164,14 +254,14 @@ components:
       required: false
       schema:
         type: integer
-      example: 1668102300
     association:
       in: query
       name: location
-      description: "Live Stream host association"
+      description: "Live Stream host association name"
       required: false
       schema:
         type: string
+        minimumLength: 1
       example: 'Greater Wichita YMCA'
   securitySchemes:
     apikey:
@@ -179,32 +269,3 @@ components:
       name: Authorization
       in: 'header'
       description: ''
-paths:
-  /live-streams:
-    get:
-      tags: 
-      - "Live Streams"
-      summary: "Upcoming live streams"
-      description: "Lists upcoming live streams"
-      operationId: "upcomingLiveStreams"
-      parameters:
-      - $ref: '#/components/parameters/page'
-      - $ref: '#/components/parameters/limit'
-      - $ref: '#/components/parameters/from'
-      - $ref: '#/components/parameters/to'
-      - $ref: '#/components/parameters/association'
-      responses:
-        "200":
-          description: "Successfully retrieved"
-          content:
-            application/json:
-              schema:
-                description: "Actual items"
-                type: object
-                properties:
-                  items:
-                    type: array
-                    items:
-                      $ref: "#/components/schemas/liveStream"
-                  summary:
-                    $ref: '#/components/schemas/pageSummary'
