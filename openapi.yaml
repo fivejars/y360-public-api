@@ -1,0 +1,210 @@
+openapi: "3.0.2"
+info:
+  description: "YMCA 360 Public API. Find out more about YMCA 360 at [https://ymca360.org/api](https://ymca360.org/api)."
+  version: "1.0.0-RC1"
+  title: "YMCA360 API v1.0"
+  termsOfService: "https://ymca360.org/api/terms/"
+  contact:
+    email: "info@ymca360.org"
+  license:
+    name: "Apache 2.0"
+    url: "http://www.apache.org/licenses/LICENSE-2.0.html"
+servers:
+  - url: "https://y360cms.docksal/api/1.0"
+    description: "Local Docksal development environment"
+  - url: "https://cms.ymca360.org/api/1.0"
+    description: "Production environment"
+tags:
+- name: "Live Streams"
+  description: "Operations with live streams"
+security:
+- apikey: []
+components:
+  schemas:
+    pageSummary:
+      description: "Page summary"
+      type: object
+      properties:
+        limit:
+          type: integer
+          description: "Requested size of the page"
+          example: 50
+        page: 
+          type: integer
+          description: "Page number"
+          example: 0
+        total:
+          type: integer
+          description: "Total count of items"
+          example: 1234
+    liveStream:
+      description: "Live Stream object"
+      type: object
+      properties:
+        id:
+          type: integer
+          description: "Unique ID of the Live Stream"
+          example: 9696
+        name:
+          type: string
+          description: "Name of the Live Stream"
+          example: "Silver circuit"
+        status:
+          type: string
+          enum: 
+            - offline
+            - live
+            - finished
+            - cancelled
+          description: >
+            Sort order:
+             * `offline` - The Live Stream hasn't started yet.
+             * `live` - The Live Stream is live.
+             * `finished` - The Live Stream has finished
+             * `cancelled` - The Live Stream has been cancelled.
+          example: "offline"
+        url:
+          type: string
+          description: "Live Stream URL (at https://ymca360.org)"
+          example: "https://ymca360.org/live/9696"
+        startTime:
+          type: integer
+          description: "Live Stream start time (UNIX timestamp)"
+          example: 1668099600
+        endTime:
+          type: integer
+          description: "Live Stream end time (UNIX timestamp)"
+          example: 1668102300
+        duration:
+          type: integer
+          description: "Live Stream duration in seconds"
+          example: 2700
+        thumbnail:
+          type: string
+          description: "URL to a live stream thumbnail image"
+          example: "https://cms.ymca360.org/sites/default/files/styles/medium/public/2022-04/031021Y360_14.jpg"
+        category:
+          type: string
+          description: "Live Stream category name"
+          example: "Boomers & Beyond"
+        association:
+          type: string
+          description: "Live Stream hosting association name"
+          example: "Greater Wichita YMCA"
+        level:
+          type: string
+          description: "Live Stream Workout level"
+          example: "All Levels"
+        instructors:
+          type: array
+          items:
+            type: string
+            description: "Instructor name"
+            example: "Shalen Scheltgen"
+        equipment:
+          type: array
+          description: "Recommended equipment"
+          items:
+            type: string
+            description: "Recommended equipment name"
+            example: "Chair"
+          example:
+            - "Chair"
+            - "Dumbbells"
+            - "Resistance Tube"
+        language:
+          type: string
+          description: "Live Stream langugage"
+          example: "English"
+        attachments:
+          type: array
+          description: "File attachments"
+          items:
+            type: object
+            properties:
+              title:
+                type: string
+                description: "Attachment title"
+                example: "Nutrition Talk.pdf"
+              url:
+                type: string
+                description: "Attachment URL"
+                example: "https://cms.ymca360.org/sites/default/files/2022-10/YMCA360_NutritionTalk.pdf"
+        restream:
+          type: boolean
+          description: "Indicates if the live stream is a restream"
+          example: false
+  parameters:
+    page:
+      in: query
+      name: "page"
+      description: "Page to retrieve, 0 indexed. If omitted defaults to `0`"
+      required: false
+      schema:
+        type: integer
+    limit:
+      in: query
+      name: limit
+      description: "Size of the page. If omitted defaults to `100`"
+      required: false
+      schema:
+        type: integer
+    from:
+      in: query
+      name: from
+      description: "Limits the returned Live Streams `end time` be greater than the provided value (UNIX timestamp)"
+      required: false
+      schema:
+        type: integer
+      example: 1668099600
+    to:
+      in: query
+      name: to
+      description: "Limits the returned Live Streams `start time` be less than the provided value (UNIX timestamp)"
+      required: false
+      schema:
+        type: integer
+      example: 1668102300
+    association:
+      in: query
+      name: location
+      description: "Live Stream host association"
+      required: false
+      schema:
+        type: string
+      example: 'Greater Wichita YMCA'
+  securitySchemes:
+    apikey:
+      type: 'apiKey'
+      name: Authorization
+      in: 'header'
+      description: ''
+paths:
+  /live-streams:
+    get:
+      tags: 
+      - "Live Streams"
+      summary: "Upcoming live streams"
+      description: "Lists upcoming live streams"
+      operationId: "upcomingLiveStreams"
+      parameters:
+      - $ref: '#/components/parameters/page'
+      - $ref: '#/components/parameters/limit'
+      - $ref: '#/components/parameters/from'
+      - $ref: '#/components/parameters/to'
+      - $ref: '#/components/parameters/association'
+      responses:
+        "200":
+          description: "Successfully retrieved"
+          content:
+            application/json:
+              schema:
+                description: "Actual items"
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/liveStream"
+                  summary:
+                    $ref: '#/components/schemas/pageSummary'
